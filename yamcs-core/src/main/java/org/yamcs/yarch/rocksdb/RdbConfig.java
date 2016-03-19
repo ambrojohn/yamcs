@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import org.rocksdb.ColumnFamilyOptions;
+import org.rocksdb.Options;
 import org.yamcs.ConfigurationException;
 import org.yamcs.YConfiguration;
 
@@ -82,9 +83,14 @@ public class RdbConfig {
     public static class TableConfig {
         Pattern tableNamePattern;
         ColumnFamilyOptions cfOptions = new ColumnFamilyOptions();
+        //these options are used for the default column family when the database is open
+        //for some strange reason we cannot use the cfOptions for that
+        Options options = new Options();
+        
         long targetFileSizeBase;
         
         TableConfig(Map<String, Object> m) throws ConfigurationException {
+            options.setCreateIfMissing(true);
             String s = YConfiguration.getString(m, KEY_tableNamePattern);
             try {
                 tableNamePattern = Pattern.compile(s);
@@ -92,31 +98,40 @@ public class RdbConfig {
                 throw new ConfigurationException("Cannot parse regexp "+e);
             }
             if(m.containsKey(KEY_cfOptions)) {
-                
                 Map<String, Object> cm = YConfiguration.getMap(m, KEY_cfOptions);
                 if(cm.containsKey("targetFileSizeBase")) {
                     cfOptions.setTargetFileSizeBase(1024 * YConfiguration.getInt(cm, "targetFileSizeBase"));
+                    options.setTargetFileSizeBase(1024 * YConfiguration.getInt(cm, "targetFileSizeBase"));
                 }
                 if(cm.containsKey("targetFileSizeMultiplier")) {
                     cfOptions.setTargetFileSizeMultiplier(YConfiguration.getInt(cm, "targetFileSizeMultiplier"));
+                    options.setTargetFileSizeMultiplier(YConfiguration.getInt(cm, "targetFileSizeMultiplier"));
                 }
                 if(cm.containsKey("maxBytesForLevelBase")) {
                     cfOptions.setMaxBytesForLevelBase(1024 * YConfiguration.getInt(cm, "maxBytesForLevelBase"));
+                    options.setMaxBytesForLevelBase(1024 * YConfiguration.getInt(cm, "maxBytesForLevelBase"));
                 }
                 if(cm.containsKey("writeBufferSize")) {
                     cfOptions.setWriteBufferSize(1024*YConfiguration.getInt(cm, "writeBufferSize"));
+                    options.setWriteBufferSize(1024*YConfiguration.getInt(cm, "writeBufferSize"));
                 }
                 if(cm.containsKey("maxBytesForLevelMultiplier")) {
                     cfOptions.setMaxBytesForLevelMultiplier(YConfiguration.getInt(cm, "maxBytesForLevelMultiplier"));
+                    options.setMaxBytesForLevelMultiplier(YConfiguration.getInt(cm, "maxBytesForLevelMultiplier"));
                 }
                 if(cm.containsKey("maxWriteBufferNumber")) {
                     cfOptions.setMaxWriteBufferNumber(YConfiguration.getInt(cm, "maxWriteBufferNumber"));
+                    options.setMaxWriteBufferNumber(YConfiguration.getInt(cm, "maxWriteBufferNumber"));
                 }
             }
         }
         
         public ColumnFamilyOptions getColumnFamilyOptions() {
             return cfOptions;
+        }
+
+        public Options getOptions() {
+            return options;
         }
     }
 }

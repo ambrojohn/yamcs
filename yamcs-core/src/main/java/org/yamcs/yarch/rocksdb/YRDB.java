@@ -12,6 +12,7 @@ import java.util.Map;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
+import org.rocksdb.DBOptions;
 import org.rocksdb.FlushOptions;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
@@ -21,11 +22,13 @@ import org.rocksdb.RocksIterator;
 import org.yamcs.yarch.rocksdb.RdbConfig.TableConfig;
 /**
  * wrapper around RocksDB that keeps track of column families
+ * 
  * @author nm
  *
  */
 public class YRDB {
     Map<Object, ColumnFamilyHandle> columnFamilies=new HashMap<Object, ColumnFamilyHandle>();
+    
     RocksDB db;
     private boolean isClosed = false;
     private final String path;
@@ -49,10 +52,11 @@ public class YRDB {
         TableConfig tc = rdbConfig.getTableConfig(f.getName());
         
         cfoptions = (tc==null)? new ColumnFamilyOptions():tc.getColumnFamilyOptions();
+        Options opt = (tc==null)? new Options():tc.getOptions();
         
         this.path = dir;
         if(f.exists()) {
-            List<byte[]> cfl = RocksDB.listColumnFamilies(new Options(), dir);
+            List<byte[]> cfl = RocksDB.listColumnFamilies(opt, dir);
             
             if(cfl!=null) {
                 List<ColumnFamilyDescriptor> cfdList = new ArrayList<ColumnFamilyDescriptor>(cfl.size());
@@ -64,18 +68,18 @@ public class YRDB {
                 db = RocksDB.open(dir, cfdList, cfhList);
                 for(int i=0;i<cfl.size();i++) {
                     byte[] b = cfl.get(i);
-                   
                     if(!Arrays.equals(b, RocksDB.DEFAULT_COLUMN_FAMILY)) {
                         Object value = cfSerializer.byteArrayToObject(b);	
                         columnFamilies.put(value, cfhList.get(i));
-                    }
+                    } 
                 }
+                
             } else { //no existing column families
-                db=RocksDB.open(dir);
+                db = RocksDB.open(opt, dir);
             }
         } else {
             //new DB
-            db=RocksDB.open(dir);
+            db = RocksDB.open(opt, dir);
         }		
     }
 
@@ -110,7 +114,14 @@ public class YRDB {
     }
 
     public synchronized ColumnFamilyHandle getColumnFamilyHandle(Object value) {
-        return columnFamilies.get(value);
+        ColumnFamilyHandle cfh = columnFamilies.get(value);
+        //in yamcs 0.29.3 and older we used to create a column family for null values (i.e. when not partitioning on a value)
+        //starting with yamcs 0.29.4 we use the default column family for this
+        // the old tables are still supported because at startup the columnFamilies map will be populated with the null key
+        if((value==null) && (cfh==null)) { 
+            return db.getDefaultColumnFamily(); 
+        }
+        return cfh;
     }
 
     public byte[] get(ColumnFamilyHandle cfh, byte[] key) throws RocksDBException {
