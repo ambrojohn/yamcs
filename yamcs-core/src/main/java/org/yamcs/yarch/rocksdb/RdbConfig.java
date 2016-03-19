@@ -104,7 +104,7 @@ public class RdbConfig {
                     cfOptions.setMaxBytesForLevelBase(1024 * YConfiguration.getInt(cm, "maxBytesForLevelBase"));
                 }
                 if(cm.containsKey("writeBufferSize")) {
-                    cfOptions.setWriteBufferSize(YConfiguration.getInt(cm, "writeBufferSize"));
+                    cfOptions.setWriteBufferSize(1024*YConfiguration.getInt(cm, "writeBufferSize"));
                 }
                 if(cm.containsKey("maxBytesForLevelMultiplier")) {
                     cfOptions.setMaxBytesForLevelMultiplier(YConfiguration.getInt(cm, "maxBytesForLevelMultiplier"));
@@ -116,11 +116,7 @@ public class RdbConfig {
         }
         
         public ColumnFamilyOptions getColumnFamilyOptions() {
-            ColumnFamilyOptions r = new ColumnFamilyOptions();
-            if(targetFileSizeBase>0) {
-                r.setTargetFileSizeBase(targetFileSizeBase);
-            }
-            return r;
+            return cfOptions;
         }
     }
 }
