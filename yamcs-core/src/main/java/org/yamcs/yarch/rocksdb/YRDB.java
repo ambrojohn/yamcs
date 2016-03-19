@@ -11,12 +11,14 @@ import java.util.Map;
 
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
+import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.FlushOptions;
 import org.rocksdb.Options;
 import org.rocksdb.ReadOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
+import org.yamcs.yarch.rocksdb.RdbConfig.TableConfig;
 /**
  * wrapper around RocksDB that keeps track of column families
  * @author nm
@@ -28,12 +30,12 @@ public class YRDB {
     private boolean isClosed = false;
     private final String path;
     private final ColumnFamilySerializer cfSerializer;
-
+    private final ColumnFamilyOptions cfoptions;
     /**
      * Create or open a new RocksDb.
      * 
      * @param dir - if it exists, it has to be a directory 
-     * @param cfSerializer - column familiy serializer
+     * @param cfSerializer - column family serializer
      * @throws RocksDBException
      * @throws IOException 
      */
@@ -43,6 +45,11 @@ public class YRDB {
         if(f.exists() && !f.isDirectory()) {
             throw new IOException("'"+dir+"' exists and it is not a directory");
         }
+        RdbConfig rdbConfig = RdbConfig.getInstance();
+        TableConfig tc = rdbConfig.getTableConfig(f.getName());
+        
+        cfoptions = (tc==null)? new ColumnFamilyOptions():tc.getColumnFamilyOptions();
+        
         this.path = dir;
         if(f.exists()) {
             List<byte[]> cfl = RocksDB.listColumnFamilies(new Options(), dir);
@@ -51,7 +58,7 @@ public class YRDB {
                 List<ColumnFamilyDescriptor> cfdList = new ArrayList<ColumnFamilyDescriptor>(cfl.size());
                 
                 for(byte[] b: cfl) {
-                    cfdList.add(new ColumnFamilyDescriptor(b));					
+                    cfdList.add(new ColumnFamilyDescriptor(b, cfoptions));					
                 }
                 List<ColumnFamilyHandle> cfhList = new ArrayList<ColumnFamilyHandle>(cfl.size());
                 db = RocksDB.open(dir, cfdList, cfhList);
@@ -80,6 +87,9 @@ public class YRDB {
         isClosed = true;
     }
 
+    /**
+     * @return true if the database is open
+     */
     public boolean isOpen() {
         return !isClosed;
     }
@@ -109,7 +119,7 @@ public class YRDB {
 
     public synchronized ColumnFamilyHandle createColumnFamily(Object value) throws RocksDBException {
         byte[] b = cfSerializer.objectToByteArray(value);
-        ColumnFamilyDescriptor cfd= new ColumnFamilyDescriptor(b);
+        ColumnFamilyDescriptor cfd= new ColumnFamilyDescriptor(b, cfoptions);
         ColumnFamilyHandle cfh = db.createColumnFamily(cfd);			
         columnFamilies.put(value, cfh);
         return cfh;
