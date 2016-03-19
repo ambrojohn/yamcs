@@ -90,7 +90,6 @@ public class RdbConfig {
         long targetFileSizeBase;
         
         TableConfig(Map<String, Object> m) throws ConfigurationException {
-            options.setCreateIfMissing(true);
             String s = YConfiguration.getString(m, KEY_tableNamePattern);
             try {
                 tableNamePattern = Pattern.compile(s);

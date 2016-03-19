@@ -53,6 +53,7 @@ public class YRDB {
         
         cfoptions = (tc==null)? new ColumnFamilyOptions():tc.getColumnFamilyOptions();
         Options opt = (tc==null)? new Options():tc.getOptions();
+        opt.setCreateIfMissing(true);
         
         this.path = dir;
         if(f.exists()) {
