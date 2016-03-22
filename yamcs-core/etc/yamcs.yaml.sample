@@ -27,6 +27,10 @@ rdbConfig:
         # config for the "tm" table. Any regular expression can be used to match the table name
         # see https://github.com/facebook/rocksdb/blob/master/include/rocksdb/options.h for an explanation on the various options
         - tableNamePattern: "tm"
+          #maximum number of open files that rocksdb will keep open at one time - the number has to be at least 10
+          # note that this applies to each rocksdb database 
+          #  - in case the table is partitioned by time, there will be multiple one rocksdb databases for each partition
+          maxOpenFiles: 300
           columnFamilyOptions:
               targetFileSizeBase: 10240     #KB
               targetFileSizeMultiplier: 10

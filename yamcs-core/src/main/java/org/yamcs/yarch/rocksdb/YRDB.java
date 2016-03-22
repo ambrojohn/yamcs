@@ -53,6 +53,7 @@ public class YRDB {
         
         cfoptions = (tc==null)? rdbConfig.getDefaultColumnFamilyOptions():tc.getColumnFamilyOptions();
         Options opt = (tc==null)? rdbConfig.getDefaultOptions():tc.getOptions();
+        DBOptions dbopt = (tc==null)? rdbConfig.getDefaultDBOptions():tc.getDBOptions();
         
         this.path = dir;
         if(f.exists()) {
@@ -65,7 +66,7 @@ public class YRDB {
                     cfdList.add(new ColumnFamilyDescriptor(b, cfoptions));					
                 }
                 List<ColumnFamilyHandle> cfhList = new ArrayList<ColumnFamilyHandle>(cfl.size());
-                db = RocksDB.open(dir, cfdList, cfhList);
+                db = RocksDB.open(dbopt, dir, cfdList, cfhList);
                 for(int i=0;i<cfl.size();i++) {
                     byte[] b = cfl.get(i);
                     if(!Arrays.equals(b, RocksDB.DEFAULT_COLUMN_FAMILY)) {

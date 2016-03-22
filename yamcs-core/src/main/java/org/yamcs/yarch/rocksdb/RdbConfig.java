@@ -9,6 +9,7 @@ import java.util.regex.PatternSyntaxException;
 
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.ColumnFamilyOptions;
+import org.rocksdb.DBOptions;
 import org.rocksdb.Env;
 import org.rocksdb.Options;
 import org.yamcs.ConfigurationException;
@@ -35,6 +36,7 @@ public class RdbConfig {
     final Env env;
     final ColumnFamilyOptions defaultColumnFamilyOptions;
     final Options defaultOptions;
+    final DBOptions defaultDBOptions;
     
     /**
      * 
@@ -75,12 +77,13 @@ public class RdbConfig {
         defaultOptions = new Options();
         defaultOptions.setEnv(env);
         defaultOptions.setCreateIfMissing(true);
+        
+        defaultDBOptions = new DBOptions();
     }
     
     /**
      * default column family options if no table specific config has been configured.
      *  
-     * @param tblName
      * @return default column family options
      */
     ColumnFamilyOptions getDefaultColumnFamilyOptions() {
@@ -92,11 +95,19 @@ public class RdbConfig {
      *  at least the environment and the create if not open are set.
      *  
      *  
-     * @param tblName
      * @return default options
      */
     Options getDefaultOptions() {
         return defaultOptions;
+    }
+    /**
+     * default db options if no table specific config has been configured.
+     *  
+     * no specific option set
+     * @return default options
+     */
+    DBOptions getDefaultDBOptions() {
+        return defaultDBOptions;
     }
     /**
      *  
@@ -119,6 +130,7 @@ public class RdbConfig {
         //these options are used for the default column family when the database is open
         //for some strange reason we cannot use the cfOptions for that
         Options options = new Options();
+        DBOptions dboptions = new DBOptions();
         
         long targetFileSizeBase;
         
@@ -130,6 +142,10 @@ public class RdbConfig {
                 throw new ConfigurationException("Cannot parse regexp "+e);
             }
             options.setCreateIfMissing(true);
+            if(m.containsKey("maxOpenFiles")) {
+                options.setMaxOpenFiles(YConfiguration.getInt(m, "maxOpenFiles"));
+                dboptions.setMaxOpenFiles(YConfiguration.getInt(m, "maxOpenFiles"));
+            }
             if(m.containsKey(KEY_cfOptions)) {
                 Map<String, Object> cm = YConfiguration.getMap(m, KEY_cfOptions);
                 if(cm.containsKey("targetFileSizeBase")) {
@@ -174,6 +190,9 @@ public class RdbConfig {
 
         public Options getOptions() {
             return options;
+        }
+        public DBOptions getDBOptions() {
+            return dboptions;
         }
     }
 }
