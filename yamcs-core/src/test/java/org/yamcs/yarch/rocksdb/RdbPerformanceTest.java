@@ -20,6 +20,7 @@ import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
+import org.rocksdb.RocksIterator;
 import org.yamcs.utils.TimeEncoding;
 import org.yamcs.yarch.ColumnDefinition;
 import org.yamcs.yarch.DataType;
@@ -123,7 +124,7 @@ public class RdbPerformanceTest extends YarchTestCase {
         System.out.println("********************** "+tblname+" timeFirst:" +timeFirst+" **********************");
         
         //populate(tblDef, 365*24*60*60);
-        populate(tbldef, 1*24*60*60, timeFirst);
+        populate(tbldef, 10*24*60*60, timeFirst);
        // Thread.sleep(1000);
         
         // populate(tblDef, 100);
@@ -212,7 +213,9 @@ public class RdbPerformanceTest extends YarchTestCase {
         List<ColumnFamilyDescriptor> cfdList = new ArrayList<ColumnFamilyDescriptor>(cfl.size());
         ColumnFamilyOptions cfoptions = new ColumnFamilyOptions();
         cfoptions.setTargetFileSizeMultiplier(10);
+        
         DBOptions dboptions = new DBOptions();
+        dboptions.setMaxOpenFiles(22);
         Options options = new Options();
         
         for(byte[] b: cfl) {
@@ -220,8 +223,42 @@ public class RdbPerformanceTest extends YarchTestCase {
         }
         
         List<ColumnFamilyHandle> cfhList = new ArrayList<ColumnFamilyHandle>(cfl.size());
-        RocksDB db = RocksDB.open(dir, cfdList, cfhList);
-
+        RocksDB db = RocksDB.open(dboptions, dir, cfdList, cfhList);
+        RocksIterator[] its = new RocksIterator[30];
+        int n = 100000;
+        int c=0;
+        for (int k=0;k<its.length; k++) {
+            System.out.println("opening iterator "+k);
+            its[k] = db.newIterator();
+            if(k==0) {
+                its[k].seekToFirst();
+            } else {
+                its[k].seek(its[k-1].key());
+            }
+            while(c<k*n) {
+                c++;
+                its[k].next();
+            }
+        }
+       
+        System.out.println("finished with first iterators");
+        Thread.sleep(30000);
+        for (int k=0;k<its.length; k++) {
+            its[k].dispose();
+        }
+        System.out.println("starting with second");
+        RocksIterator it2 = db.newIterator();
+        it2.seekToFirst();
+     
+        while(it2.isValid()) {
+            c++;
+            it2.next();
+            Thread.sleep(1000);
+            if(c==2000000) break;
+        }
+        
+        System.out.println("navigated through "+c+" results");
+       // RocksIterator it2 = db.newIterator();
         
         String s = db.getProperty(cfhList.get(0), "rocksdb.stats");
         System.out.println(s);
