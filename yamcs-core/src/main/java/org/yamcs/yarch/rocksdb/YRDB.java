@@ -51,9 +51,8 @@ public class YRDB {
         RdbConfig rdbConfig = RdbConfig.getInstance();
         TableConfig tc = rdbConfig.getTableConfig(f.getName());
         
-        cfoptions = (tc==null)? new ColumnFamilyOptions():tc.getColumnFamilyOptions();
-        Options opt = (tc==null)? new Options():tc.getOptions();
-        opt.setCreateIfMissing(true);
+        cfoptions = (tc==null)? rdbConfig.getDefaultColumnFamilyOptions():tc.getColumnFamilyOptions();
+        Options opt = (tc==null)? rdbConfig.getDefaultOptions():tc.getOptions();
         
         this.path = dir;
         if(f.exists()) {

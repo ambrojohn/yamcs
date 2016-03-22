@@ -17,6 +17,7 @@ import org.junit.Test;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
+import org.rocksdb.DBOptions;
 import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.yamcs.utils.TimeEncoding;
@@ -122,8 +123,8 @@ public class RdbPerformanceTest extends YarchTestCase {
         System.out.println("********************** "+tblname+" timeFirst:" +timeFirst+" **********************");
         
         //populate(tblDef, 365*24*60*60);
-        populate(tbldef, 90*24*60*60, timeFirst);
-        Thread.sleep(1000);
+        populate(tbldef, 1*24*60*60, timeFirst);
+       // Thread.sleep(1000);
         
         // populate(tblDef, 100);
         read(tblname, null);
@@ -132,6 +133,7 @@ public class RdbPerformanceTest extends YarchTestCase {
         read(tblname, "packet9");
         read(tblname, "packet14");
         read(tblname, "packet19");
+        read(tblname, null);
     }
 
     @Test
@@ -210,14 +212,18 @@ public class RdbPerformanceTest extends YarchTestCase {
         List<ColumnFamilyDescriptor> cfdList = new ArrayList<ColumnFamilyDescriptor>(cfl.size());
         ColumnFamilyOptions cfoptions = new ColumnFamilyOptions();
         cfoptions.setTargetFileSizeMultiplier(10);
-       
+        DBOptions dboptions = new DBOptions();
+        Options options = new Options();
+        
         for(byte[] b: cfl) {
             cfdList.add(new ColumnFamilyDescriptor(b, cfoptions));                                 
         }
         
         List<ColumnFamilyHandle> cfhList = new ArrayList<ColumnFamilyHandle>(cfl.size());
         RocksDB db = RocksDB.open(dir, cfdList, cfhList);
-        String s = db.getProperty(cfhList.get(1), "rocksdb.stats");
+
+        
+        String s = db.getProperty(cfhList.get(0), "rocksdb.stats");
         System.out.println(s);
        // Thread.sleep(100000);
         db.close();

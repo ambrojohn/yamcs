@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.ColumnFamilyOptions;
+import org.rocksdb.Env;
 import org.rocksdb.Options;
 import org.yamcs.ConfigurationException;
 import org.yamcs.YConfiguration;
@@ -26,8 +28,13 @@ public class RdbConfig {
     public static final String KEY_tableConfig = "tableConfig";
     public static final String KEY_cfOptions = "columnFamilyOptions";
     public static final String KEY_tableNamePattern = "tableNamePattern";
+    public static final String KEY_tfConfig = "tableFormatConfig";
 
+    
     private List<TableConfig> tblConfigList = new ArrayList<TableConfig>();
+    final Env env;
+    final ColumnFamilyOptions defaultColumnFamilyOptions;
+    final Options defaultOptions;
     
     /**
      * 
@@ -63,8 +70,34 @@ public class RdbConfig {
             TableConfig tm = new TableConfig(m);
             tblConfigList.add(tm);
         }
+        env = Env.getDefault();
+        defaultColumnFamilyOptions = new ColumnFamilyOptions();
+        defaultOptions = new Options();
+        defaultOptions.setEnv(env);
+        defaultOptions.setCreateIfMissing(true);
     }
     
+    /**
+     * default column family options if no table specific config has been configured.
+     *  
+     * @param tblName
+     * @return default column family options
+     */
+    ColumnFamilyOptions getDefaultColumnFamilyOptions() {
+        return defaultColumnFamilyOptions;
+    }
+    /**
+     * default options if no table specific config has been configured.
+     *  
+     *  at least the environment and the create if not open are set.
+     *  
+     *  
+     * @param tblName
+     * @return default options
+     */
+    Options getDefaultOptions() {
+        return defaultOptions;
+    }
     /**
      *  
      * @param tableName
@@ -96,6 +129,7 @@ public class RdbConfig {
             } catch (PatternSyntaxException e) {
                 throw new ConfigurationException("Cannot parse regexp "+e);
             }
+            options.setCreateIfMissing(true);
             if(m.containsKey(KEY_cfOptions)) {
                 Map<String, Object> cm = YConfiguration.getMap(m, KEY_cfOptions);
                 if(cm.containsKey("targetFileSizeBase")) {
@@ -121,6 +155,15 @@ public class RdbConfig {
                 if(cm.containsKey("maxWriteBufferNumber")) {
                     cfOptions.setMaxWriteBufferNumber(YConfiguration.getInt(cm, "maxWriteBufferNumber"));
                     options.setMaxWriteBufferNumber(YConfiguration.getInt(cm, "maxWriteBufferNumber"));
+                }
+                if(cm.containsKey(KEY_tfConfig)) {
+                    Map<String, Object> tfc = YConfiguration.getMap(m, KEY_tfConfig);
+                    BlockBasedTableConfig tableFormatConfig = new BlockBasedTableConfig();
+                    if(tfc.containsKey("blockSize")) {
+                        tableFormatConfig.setBlockSize(1024L*YConfiguration.getInt(cm, "blockSize"));
+                    }
+                    options.setTableFormatConfig(tableFormatConfig);
+                    cfOptions.setTableFormatConfig(tableFormatConfig);
                 }
             }
         }
